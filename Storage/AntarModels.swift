@@ -51,15 +51,18 @@ internal enum AnalysisLanguage : String {
 
 public struct AGDocumentPage: Codable {
     public var documents:[AGDocument]
-    public var total:Int?
-    public var pages:Int?
+    public var total:Int
+    public var pages:Int
     public var currentPage:Int?
+    public var nextPageUri: String?
+    public var prevPageUri: String?
     
     enum CodingKeys: String, CodingKey {
         case documents = "results"
-        case total
-        case pages
-        case currentPage
+        case total = "totalEntities"
+        case pages = "totalPages"
+        case nextPageUri
+        case prevPageUri
     }
 }
 

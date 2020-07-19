@@ -21,6 +21,10 @@ struct ActiveFiltersView: View {
      */
     
     var body: some View {
+        VStack(alignment: .leading) {
+            Text("Active filters")
+                .foregroundColor(.gray)
+                .bold()
         ScrollView(.horizontal) {
             HStack {
                 Text("\(String(describing: filters.company).capitalized)")
@@ -30,18 +34,18 @@ struct ActiveFiltersView: View {
                     .background(Color.blue)
                     .cornerRadius(8.0)
                 
-                Text("\(String(describing: filters.sortDirection))")
+                Text("\(String(describing: filters.sortDirection)) order")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .padding(.all, 10)
-                    .background(Color.yellow)
+                    .background(Color.pink)
                     .cornerRadius(8.0)
                 
-                Text("\(String(describing: filters.sortProperty))")
+                Text("by \(String(describing: filters.sortProperty))")
                     .font(.system(size: 18, weight: .bold, design: .rounded))
                     .foregroundColor(.white)
                     .padding(.all, 10)
-                    .background(Color.yellow)
+                    .background(Color.pink)
                     .cornerRadius(8.0)
                 if filters.specificFilters != nil {
                 Text("\(String(describing: filters.specificFilters))")
@@ -51,9 +55,9 @@ struct ActiveFiltersView: View {
                     .background(Color.yellow)
                     .cornerRadius(8.0)
                 }
-                
-            }.padding(.all, 10)
+            }
         }.animation(.easeIn)
+        }
     }
 }
 

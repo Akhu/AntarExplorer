@@ -15,6 +15,7 @@ struct Inspector: View {
     @State var itemPerPage = 20
     @State var sortDirection : AGDocumentSortingDirection = .descending
     @State var sortProperty : AGDocumentSortingOption = .createdAt
+    @State var specificFilters : String = ""
     
     var body: some View {
         NavigationView {
@@ -36,15 +37,39 @@ struct Inspector: View {
                         .bold()
                 }
                 HStack {
-                    Label("Sort direction", systemImage: "arrow.up.arrow.down.circle.fill").foregroundColor(.gray)
+                    Label("Direction", systemImage: "arrow.up.arrow.down.circle.fill").foregroundColor(.gray)
                     Spacer()
-                    Picker(selection: $sortDirection, label: Text("Sort direction")) {
+                    Picker(selection: $sortDirection, label: Text("Direction")) {
                         ForEach(AGDocumentSortingDirection.allCases) { sort in
                             Text("\(String(describing: sort).capitalized)").tag(sort)
                         }
                     }.pickerStyle(SegmentedPickerStyle())
+                    
+                    
+                }
+                Picker(selection: $sortProperty, label: Text("Property")) {
+                    ForEach(AGDocumentSortingOption.allCases) { property in
+                        Text("\(String(describing: property).capitalized)").tag(property)
+                    }
                 }
                 
+            }
+                
+            Section(
+                header: Label("Custom Filters", systemImage: "square.and.pencil"),
+                footer: Button(action: {
+                    UIApplication.shared.open(URL(string: "https://doc.agoods.fr/v2/api/antar.html#documents_get")!)
+                }) {
+                    HStack {
+                        Image(systemName: "info.circle")
+                            .foregroundColor(.blue)
+                        Text("Documentation")
+                            .foregroundColor(.blue)
+                            .underline()
+                    }
+                }
+            ) {
+                TextField("Custom Filters", text: $specificFilters)
             }
             
             Section {
@@ -56,9 +81,11 @@ struct Inspector: View {
                     newFilters.sortProperty = sortProperty
                     appState.setFilters(newFilters)
                 }) {
-                    Image(systemName: "floppy")
-                    Text("Done")
-                        .padding(.all, 10)                        
+                    HStack{
+                        Image(systemName: "checkmark.circle")
+                        Text("Done")
+                            .padding(.all, 10)
+                    }
                 }
             }
                 
@@ -71,7 +98,7 @@ struct Inspector_Previews: PreviewProvider {
     static var previews: some View {
         Group {
             Inspector(selectedCompany: Company.aboutgoods).environmentObject(AppData())
-            Inspector(selectedCompany: Company.aboutgoods).environmentObject(AppData())
+            Inspector(selectedCompany: Company.aboutgoods).previewLayout(.device).environmentObject(AppData())
         }
     }
 }

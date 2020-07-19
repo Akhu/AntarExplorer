@@ -28,7 +28,7 @@ class AntarFilters: ObservableObject {
 }
 
 final class AppData: ObservableObject {
-    @Published var loadedDocuments:[AGDocument] = mockAntarResponseDocuments()!
+    @Published var loadedDocuments:AGDocumentPage = mockAntarResponseDocuments()!
     @Published var mockDocument:AGDocument = mockLoadReceipt()!
     @Published var mockMode = true
     @Published var filters: AntarFilters = AntarFilters()
@@ -41,22 +41,95 @@ final class AppData: ObservableObject {
     
     func loadDocumentsFromNetwork() {
         isLoading = true
-        NetworkManager.loadAllDocuments(filters) { [self] documents in
-            print(documents.count)
-            self.loadedDocuments = documents
+        NetworkManager.loadAllDocuments(filters) { [self] documentPage in
+            print(documentPage.documents)
+            self.loadedDocuments = documentPage
             isLoading = false
+        }
+    }
+    
+    func loadNextPage() {
+        isLoading = true
+        NetworkManager.loadPage(targetPage: loadedDocuments.nextPageUri, filters: filters) { newPage in
+            self.loadedDocuments = newPage
+            self.isLoading = false
+        }
+    }
+    
+    func loadPreviousPage() {
+        isLoading = true
+        NetworkManager.loadPage(targetPage: loadedDocuments.prevPageUri, filters: filters) { newPage in
+            self.loadedDocuments = newPage
+            self.isLoading = false
         }
     }
 }
 
 class NetworkManager {
     
-    static func loadAllDocuments(_ filters: AntarFilters, _ completion: @escaping (_ documents: [AGDocument]) -> (Void)) {
+    static let baseUrl = URL(string: "https://receipt.agkit.io/v2/")!
+    
+    static func loadPage(targetPage: String?, filters: AntarFilters,  _ completion: @escaping (_ documentsPage: AGDocumentPage) -> (Void)){
+        authenticate { hydraAuth  in
+            if let authObject = hydraAuth {
+                loadDocumentDataFromURL(authObject, urlPath: targetPage, filters: filters) { documentPage in
+                    completion(documentPage)
+                }
+            } else {
+                print("could not auth")
+            }
+        }
+    }
+    
+    private static func loadDocumentDataFromURL(_ authentication: HydraAuth, urlPath: String?, filters: AntarFilters, _ completion: @escaping (_ documents: AGDocumentPage) -> (Void)) {
+        
+        if let newPath = urlPath {
+            var urlString = baseUrl.absoluteString
+            urlString.append(contentsOf: newPath.dropFirst())
+            
+            if let url = URL(string: urlString) {
+                var headers: HTTPHeaders = [
+                    "Authorization" : "\(authentication.tokenType) \(authentication.accessToken)",
+                    "format" : "short",
+                ]
+                
+                if(filters.company != Company.any){
+                    headers.add(name: "company-uid", value: filters.company.rawValue)
+                }
+                
+                AF.request(url,
+                           headers: headers
+                ).responseData { response in
+                    debugPrint(response.request?.url?.absoluteString)
+                    switch response.result {
+                    case .success:
+                        //debugPrint(response.result)
+                        if let data = response.data {
+                            do {
+                                //print("Received Data: \(String(describing: response.data?.count))")
+                                let decodedResponse = try JSONDecoder().decode(AGDocumentPage.self, from: data)
+                                completion(decodedResponse)
+                            } catch let error as NSError {
+                                print(error)
+                                assertionFailure(error.description)
+                            }
+                        }
+                        break
+                    case let .failure(error):
+                        print(error)
+                        break
+                    }
+                }
+            }
+        }
+    }
+    
+    static func loadAllDocuments(_ filters: AntarFilters, _ completion: @escaping (_ documentsPage: AGDocumentPage) -> (Void)){
         
         authenticate { hydraAuth  in
             if let authObject = hydraAuth {
                 gatherDocuments(authObject, filters: filters) { documentPage in
-                    completion(documentPage.documents)
+                    completion(documentPage)
                 }
             }else {
                 print("could not auth")
@@ -77,8 +150,6 @@ class NetworkManager {
         if(filters.company != Company.any){
             headers.add(name: "company-uid", value: filters.company.rawValue)
         }
-        
-        
         
         var urlParameters : Parameters = [
             "per_page" : filters.itemPerPage,
@@ -159,11 +230,11 @@ class NetworkManager {
 }
 
 
-func mockAntarResponseDocuments() -> [AGDocument]? {
+func mockAntarResponseDocuments() -> AGDocumentPage? {
     if let dataToDecode = FileReader.getContent(ofFileName: "AntarResponseDocumentsMock", withExtension: "json") {
         do {
             let documentPageData = try JSONDecoder().decode(AGDocumentPage.self, from: dataToDecode)
-            return documentPageData.documents
+            return documentPageData
         }catch let error as NSError {
             print(error.description)
             return nil
